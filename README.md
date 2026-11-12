@@ -5,14 +5,16 @@ A full-stack e-commerce clothing website built with **React.js + Vite** and **Dj
 ## Main Features
 - Professional responsive storefront
 - Product catalog with categories, search, filtering and sorting
-- Product details with size/color selection
-- Shopping cart
-- Wishlist
+- Product details with size/color selection and reviews
+- Smart recommendations and recently viewed items
+- Shopping cart and wishlist flows
 - User registration, login and JWT authentication
-- Checkout and order creation
+- Checkout with promo codes and discount handling
 - Address management
-- Order history
-- Django admin dashboard for products, categories and orders
+- Order history with tracking progress
+- User profile and account overview
+- Dark mode interface toggle
+- Django admin dashboard for products, categories, reviews and orders
 - REST API ready for React frontend
 - Responsive UI with Tailwind CSS
 
