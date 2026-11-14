@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
+from django.db.models import Count, Sum
 from rest_framework import generics, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -125,6 +126,58 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
             {"detail": "We will email you when this product is back in stock."},
             status=status.HTTP_201_CREATED,
         )
+
+
+class AdminStatsView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAdminUser]
+
+    def get(self, request):
+        total_revenue = Order.objects.aggregate(total_revenue=Sum("total"))["total_revenue"] or 0
+        total_orders = Order.objects.count()
+        active_products = Product.objects.filter(stock__gt=0).count()
+        average_order = (total_revenue / total_orders) if total_orders else 0
+
+        category_breakdown = [
+            {"name": item["category__name"], "count": item["count"]}
+            for item in Product.objects.values("category__name")
+            .annotate(count=Count("id"))
+            .order_by("-count", "category__name")
+        ]
+
+        status_breakdown = [
+            {"status": item["status"], "count": item["count"]}
+            for item in Order.objects.values("status")
+            .annotate(count=Count("id"))
+            .order_by("status")
+        ]
+
+        top_products = [
+            {
+                "name": item["product__name"],
+                "category": item["product__category__name"],
+                "sold": item["total_quantity"],
+            }
+            for item in OrderItem.objects.values("product__name", "product__category__name")
+            .annotate(total_quantity=Sum("quantity"))
+            .order_by("-total_quantity")[:6]
+        ]
+
+        low_stock_products = list(
+            Product.objects.filter(stock__lte=10)
+            .order_by("stock")[:6]
+            .values("name", "stock", "category__name")
+        )
+
+        return Response({
+            "total_revenue": float(total_revenue),
+            "total_orders": total_orders,
+            "active_products": active_products,
+            "average_order": float(average_order),
+            "category_breakdown": category_breakdown,
+            "status_breakdown": status_breakdown,
+            "top_products": top_products,
+            "low_stock_products": low_stock_products,
+        })
 
 
 class AddressViewSet(viewsets.ModelViewSet):

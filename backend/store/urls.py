@@ -6,6 +6,7 @@ from .views import (
     RegisterView,
     UserProfileView,
     WalletView,
+    AdminStatsView,
     CategoryViewSet,
     ProductViewSet,
     AddressViewSet,
@@ -24,5 +25,6 @@ urlpatterns = [
     path("auth/refresh/", TokenRefreshView.as_view()),
     path("auth/me/", UserProfileView.as_view()),
     path("auth/wallet/", WalletView.as_view()),
+    path("admin/stats/", AdminStatsView.as_view(), name="admin-stats"),
     path("", include(router.urls)),
 ]

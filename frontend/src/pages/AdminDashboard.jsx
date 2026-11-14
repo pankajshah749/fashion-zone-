@@ -13,43 +13,71 @@ export default function AdminDashboard() {
   const [products, setProducts] = useState([])
   const [orders, setOrders] = useState([])
   const [stats, setStats] = useState(defaultStats)
+  const [isAdmin, setIsAdmin] = useState(true)
 
   useEffect(() => {
-    Promise.all([
-      api.get("products/").catch(() => ({ data: [] })),
-      api.get("orders/").catch(() => ({ data: [] })),
-    ]).then(([productResponse, orderResponse]) => {
-      const productList = productResponse.data || []
-      const orderList = orderResponse.data || []
+    const loadDashboard = async () => {
+      try {
+        const { data } = await api.get("admin/stats/")
+        setIsAdmin(true)
+        setStats({
+          totalRevenue: Number(data.total_revenue || 0),
+          totalOrders: Number(data.total_orders || 0),
+          activeProducts: Number(data.active_products || 0),
+          averageOrder: Number(data.average_order || 0),
+        })
+        setProducts(data.top_products || [])
+        setOrders(data.status_breakdown || [])
+      } catch (error) {
+        setIsAdmin(false)
+        try {
+          const [productResponse, orderResponse] = await Promise.all([
+            api.get("products/").catch(() => ({ data: [] })),
+            api.get("orders/").catch(() => ({ data: [] })),
+          ])
 
-      setProducts(productList)
-      setOrders(orderList)
+          const productList = productResponse.data || []
+          const orderList = orderResponse.data || []
+          setProducts(productList)
+          setOrders(orderList)
 
-      const revenue = orderList.reduce((sum, order) => sum + Number(order.total || 0), 0)
-      const averageOrder = orderList.length ? revenue / orderList.length : 0
-      setStats({
-        totalRevenue: revenue,
-        totalOrders: orderList.length,
-        activeProducts: productList.length,
-        averageOrder,
-      })
-    }).catch(() => {
-      setProducts([])
-      setOrders([])
-      setStats(defaultStats)
-    })
+          const revenue = orderList.reduce((sum, order) => sum + Number(order.total || 0), 0)
+          const averageOrder = orderList.length ? revenue / orderList.length : 0
+          setStats({
+            totalRevenue: revenue,
+            totalOrders: orderList.length,
+            activeProducts: productList.length,
+            averageOrder,
+          })
+        } catch {
+          setProducts([])
+          setOrders([])
+          setStats(defaultStats)
+        }
+      }
+    }
+
+    loadDashboard()
   }, [])
 
   const categoryBreakdown = useMemo(() => {
+    if (products.length && typeof products[0]?.category === "string") {
+      return products.map(product => ({ name: product.category || "Uncategorized", count: product.sold || 1 }))
+    }
+
     const groups = {}
     products.forEach(product => {
-      const key = product.category_name || "Uncategorized"
+      const key = product.category_name || product.category || "Uncategorized"
       groups[key] = (groups[key] || 0) + 1
     })
     return Object.entries(groups).map(([name, count]) => ({ name, count }))
   }, [products])
 
   const statusBreakdown = useMemo(() => {
+    if (orders.length && typeof orders[0]?.status === "string") {
+      return orders.map(entry => [entry.status, entry.count])
+    }
+
     const groups = { pending: 0, processing: 0, shipped: 0, delivered: 0, cancelled: 0 }
     orders.forEach(order => {
       const status = order.status || "pending"
@@ -62,6 +90,11 @@ export default function AdminDashboard() {
     <div className="mb-8">
       <p className="text-sm font-bold uppercase tracking-[0.25em] text-rose-600">Reports</p>
       <h1 className="mt-2 text-4xl font-black">Admin analytics dashboard</h1>
+      {!isAdmin && (
+        <p className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+          Demo view: sign in as a Django admin user to access the protected analytics endpoint.
+        </p>
+      )}
     </div>
 
     <div className="mb-8 grid gap-4 md:grid-cols-4">
@@ -110,11 +143,13 @@ export default function AdminDashboard() {
         </button>
       </div>
       <div className="grid gap-4 md:grid-cols-3">
-        {products.slice(0, 6).map(product => (
-          <div key={product.id} className="rounded-2xl bg-zinc-50 p-4">
-            <p className="font-bold">{product.name}</p>
-            <p className="mt-1 text-sm text-zinc-500">{product.category_name}</p>
-            <p className="mt-3 text-lg font-black">Rs. {Number(product.price).toFixed(2)}</p>
+        {products.slice(0, 6).map((product, index) => (
+          <div key={product.id || `${product.name}-${index}`} className="rounded-2xl bg-zinc-50 p-4">
+            <p className="font-bold">{product.name || product.product_name}</p>
+            <p className="mt-1 text-sm text-zinc-500">{product.category || product.category_name || product.product__category__name || "General"}</p>
+            <p className="mt-3 text-lg font-black">
+              {typeof product.price === "number" ? `Rs. ${Number(product.price).toFixed(2)}` : `${product.sold || 0} sold`}
+            </p>
           </div>
         ))}
       </div>
