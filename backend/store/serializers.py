@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from rest_framework import serializers
 
-from .models import Category, Product, ProductReview, UserWallet, Address, Order, OrderItem
+from .models import Category, Product, ProductImage, ProductReview, UserWallet, Address, Order, OrderItem
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -73,17 +73,28 @@ class ProductReviewSerializer(serializers.ModelSerializer):
         return review
 
 
+class ProductImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductImage
+        fields = ("id", "image", "alt_text", "position")
+
+
+class ProductStockAlertSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+
 class ProductSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source="category.name", read_only=True)
     average_rating = serializers.SerializerMethodField()
     review_count = serializers.SerializerMethodField()
+    gallery = ProductImageSerializer(many=True, read_only=True)
 
     class Meta:
         model = Product
         fields = (
             "id", "category", "category_name", "name", "slug", "description", "price",
             "old_price", "image", "sizes", "colors", "stock", "featured", "created_at",
-            "average_rating", "review_count"
+            "average_rating", "review_count", "gallery"
         )
 
     def get_average_rating(self, obj):
@@ -123,7 +134,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         items = validated_data.pop("items")
-        payment_method = str(validated_data.get("payment_method", "Cash on Delivery")).strip()
+        payment_method = str(validated_data.pop("payment_method", "Cash on Delivery")).strip()
         coupon_code = str(validated_data.pop("coupon_code", "")).strip().upper()
         subtotal = sum(item["product"].price * item.get("quantity", 1) for item in items)
 

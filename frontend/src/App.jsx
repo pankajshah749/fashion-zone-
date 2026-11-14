@@ -10,6 +10,7 @@ import Checkout from "./pages/Checkout"
 import Orders from "./pages/Orders"
 import Profile from "./pages/Profile"
 import AdminDashboard from "./pages/AdminDashboard"
+import Compare from "./pages/Compare"
 
 export default function App() {
   return <>
@@ -25,6 +26,7 @@ export default function App() {
       <Route path="/orders" element={<Orders />} />
       <Route path="/profile" element={<Profile />} />
       <Route path="/dashboard" element={<AdminDashboard />} />
+      <Route path="/compare" element={<Compare />} />
     </Routes>
   </>
 }

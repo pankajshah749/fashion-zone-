@@ -2,18 +2,19 @@ from decimal import Decimal
 
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
-from rest_framework import generics, permissions, viewsets
+from rest_framework import generics, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.filters import SearchFilter, OrderingFilter
 
-from .models import Category, Product, ProductReview, UserWallet, Address, Order, OrderItem
+from .models import Category, Product, ProductReview, ProductStockAlert, UserWallet, Address, Order, OrderItem
 from .serializers import (
     RegisterSerializer,
     UserProfileSerializer,
     UserWalletSerializer,
     CategorySerializer,
     ProductSerializer,
+    ProductStockAlertSerializer,
     ProductReviewSerializer,
     AddressSerializer,
     OrderSerializer,
@@ -102,6 +103,28 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
         reviews = product.reviews.select_related("user").all()
         serializer = ProductReviewSerializer(reviews, many=True)
         return Response(serializer.data)
+
+    @action(detail=True, methods=["post"], permission_classes=[permissions.AllowAny], url_path="stock-alert")
+    def stock_alert(self, request, slug=None):
+        product = self.get_object()
+        serializer = ProductStockAlertSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        if product.stock > 0:
+            return Response(
+                {"detail": "This product is already in stock."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        ProductStockAlert.objects.update_or_create(
+            product=product,
+            email=serializer.validated_data["email"].strip().lower(),
+            defaults={"notified_at": None},
+        )
+        return Response(
+            {"detail": "We will email you when this product is back in stock."},
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class AddressViewSet(viewsets.ModelViewSet):

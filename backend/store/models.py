@@ -1,8 +1,14 @@
 from decimal import Decimal
+import logging
 
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.contrib.auth.models import User
+from django.core.mail import send_mail
 from django.db import models
+from django.utils import timezone
+
+
+logger = logging.getLogger(__name__)
 
 
 class Category(models.Model):
@@ -30,6 +36,52 @@ class Product(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class ProductImage(models.Model):
+    product = models.ForeignKey(Product, related_name="gallery", on_delete=models.CASCADE)
+    image = models.ImageField(upload_to="products/gallery/")
+    alt_text = models.CharField(max_length=200, blank=True)
+    position = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ["position", "id"]
+
+    def __str__(self):
+        return f"{self.product.name} image {self.position + 1}"
+
+
+class ProductStockAlert(models.Model):
+    product = models.ForeignKey(Product, related_name="stock_alerts", on_delete=models.CASCADE)
+    email = models.EmailField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    notified_at = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=("product", "email"), name="unique_product_stock_alert_email")
+        ]
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.email} - {self.product.name}"
+
+
+def send_stock_alerts(product_id):
+    product = Product.objects.get(pk=product_id)
+    alerts = ProductStockAlert.objects.filter(product=product, notified_at__isnull=True)
+    for alert in alerts:
+        sent = send_mail(
+            subject=f"{product.name} is back in stock",
+            message=f"The item you asked about is available again: {product.name}.",
+            from_email=None,
+            recipient_list=[alert.email],
+            fail_silently=True,
+        )
+        if sent:
+            ProductStockAlert.objects.filter(pk=alert.pk, notified_at__isnull=True).update(notified_at=timezone.now())
+        else:
+            logger.warning("Could not send stock alert for product %s to %s", product.pk, alert.email)
 
 
 class ProductReview(models.Model):

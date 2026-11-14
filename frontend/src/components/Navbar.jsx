@@ -5,7 +5,7 @@ import { useStore } from "../context/StoreContext"
 
 export default function Navbar() {
   const [open, setOpen] = useState(false)
-  const { cartCount, wishlist, theme, toggleTheme } = useStore()
+  const { cartCount, wishlist, compare, theme, toggleTheme } = useStore()
 
   const headerStyle = theme === "dark"
     ? "border-white/10 bg-zinc-950/65 shadow-lg shadow-black/10 backdrop-blur-xl backdrop-saturate-150"
@@ -20,6 +20,7 @@ export default function Navbar() {
         <NavLink to="/shop">Shop</NavLink>
         <NavLink to="/wishlist">Wishlist</NavLink>
         <NavLink to="/orders">Orders</NavLink>
+        <NavLink to="/compare">Compare ({compare.length})</NavLink>
         <NavLink to="/dashboard">Dashboard</NavLink>
       </nav>
 
@@ -37,6 +38,6 @@ export default function Navbar() {
       </div>
     </div>
 
-    {open && <div className="border-t border-zinc-200 bg-white px-4 py-4 md:hidden dark:border-zinc-800 dark:bg-zinc-950"><div className="flex flex-col gap-4"><Link to="/" onClick={()=>setOpen(false)}>Home</Link><Link to="/shop" onClick={()=>setOpen(false)}>Shop</Link><Link to="/wishlist" onClick={()=>setOpen(false)}>Wishlist</Link><Link to="/orders" onClick={()=>setOpen(false)}>Orders</Link><Link to="/dashboard" onClick={()=>setOpen(false)}>Dashboard</Link><Link to="/profile" onClick={()=>setOpen(false)}>Profile</Link></div></div>}
+    {open && <div className="border-t border-zinc-200 bg-white px-4 py-4 md:hidden dark:border-zinc-800 dark:bg-zinc-950"><div className="flex flex-col gap-4"><Link to="/" onClick={()=>setOpen(false)}>Home</Link><Link to="/shop" onClick={()=>setOpen(false)}>Shop</Link><Link to="/wishlist" onClick={()=>setOpen(false)}>Wishlist</Link><Link to="/orders" onClick={()=>setOpen(false)}>Orders</Link><Link to="/compare" onClick={()=>setOpen(false)}>Compare ({compare.length})</Link><Link to="/dashboard" onClick={()=>setOpen(false)}>Dashboard</Link><Link to="/profile" onClick={()=>setOpen(false)}>Profile</Link></div></div>}
   </header>
 }
